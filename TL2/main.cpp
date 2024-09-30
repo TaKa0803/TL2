@@ -1,8 +1,13 @@
 #include<cstdio>
 #include<cstdlib>
 
-int main() {
-	printf("Hello world !\n");
+int main(int argc,char*argv[]) {
+
+	for (int i = 0; i < argc; i++) {
+		//•¶Žš—ñ‚Ìi”Ô‚ð•\Ž¦
+		printf(argv[i]);
+		printf("\n");
+	}
 
 	system("pause");
 
