@@ -3,14 +3,25 @@
 
 using namespace DirectX;
 
-void TextureConverter::ConvertTextureWICToDDS(const std::string& filepath)
+void TextureConverter::ConvertTextureWICToDDS(const std::string& filepath, int numOptions, char* options[])
 {
 	LoadWICTextureFromFile(filepath);
 
 	//読み込んだディフェーズテクスチャをSRGBとして扱う
-	SaveDDSTextureToFile();
+	SaveDDSTextureToFile(numOptions, options);
 }
 
+void TextureConverter::OutputUsage()
+{
+	printf("画像ファイルでWIC形式からDDS形式に変換します。\n");
+	printf("\n");
+	printf("TextureConverter[ドライブ:][パス][ファイル名]\n");
+	printf("\n");
+	printf("[ドライブ:][パス][ファイル名]:変換したいIWC形式の画像ファイルを指定します\n");
+	printf("\n");
+	printf("古パス後に[スペース][-ml][スペース][数字]：miplevelの指定ができます\n");
+
+}
 
 void TextureConverter::LoadWICTextureFromFile(const std::string& filepath)
 {
@@ -63,7 +74,7 @@ void TextureConverter::SeparateFilePath(const std::wstring& filePath)
 	}
 	else {
 		fileExt_ = L"";
-		execeptExt =filePath;
+		execeptExt = filePath;
 	}
 
 	//区切り文字がでてくる一番最後の部分を検索
@@ -91,26 +102,29 @@ void TextureConverter::SeparateFilePath(const std::wstring& filePath)
 	fileName_ = execeptExt;
 }
 
-void TextureConverter::SaveDDSTextureToFile()
+void TextureConverter::SaveDDSTextureToFile(int numOptions, char* options[])
 {
+
+	size_t mipLevel = 0;
+	//ミップマップレベル指定を検索
+	for (int i = 0; i < numOptions; i++) {
+		if (std::string(options[i]) == "-ml"){
+			//ミップレベル指定
+			mipLevel = std::stoi(options[i + 1]);
+			break;
+		}
+	}
+
 	DirectX::ScratchImage mipChain;
 	//ミップマップ生成
 	HRESULT result;
 	result = DirectX::GenerateMipMaps(scratchImage_.GetImages(), scratchImage_.GetImageCount(), scratchImage_.GetMetadata(),
-		DirectX::TEX_FILTER_DEFAULT, 0, mipChain);
+		DirectX::TEX_FILTER_DEFAULT, mipLevel, mipChain);
 
 	if (SUCCEEDED(result)) {
 		scratchImage_ = std::move(mipChain);
 		metadata_ = scratchImage_.GetMetadata();
 	}
-
-	//ScratchImage converted;
-	//result = Compress(scratchImage_.GetImages(), scratchImage_.GetImageCount(), metadata_,
-	//	DXGI_FORMAT_BC7_UNORM_SRGB, TEX_COMPRESS_BC7_QUICK | TEX_COMPRESS_SRGB_OUT | TEX_COMPRESS_PARALLEL, 1.0f, converted);
-	//if (SUCCEEDED(result)) {
-	//	scratchImage_ = std::move(converted);
-	//	metadata_ = scratchImage_.GetMetadata();
-	//}
 
 	//読み込んだテクスチャをSRGBとして扱う
 	metadata_.format = DirectX::MakeSRGB(metadata_.format);
@@ -121,3 +135,4 @@ void TextureConverter::SaveDDSTextureToFile()
 	result = DirectX::SaveToDDSFile(scratchImage_.GetImages(), scratchImage_.GetImageCount(), metadata_, DirectX::DDS_FLAGS_NONE, filepath.c_str());
 	assert(SUCCEEDED(result));
 }
+
